@@ -1,207 +1,191 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>アルカディアンドリーム｜ワンタップカンペ</title>
 <style>
-  body{margin:0;background:#0b0f17;color:#e8eefc;font-family:sans-serif}
-  .wrap{max-width:600px;margin:auto;padding:12px}
-  .card{background:#121a29;border:1px solid #23304a;border-radius:12px;padding:12px;margin-bottom:12px}
-  h3{margin:0 0 8px;font-size:14px}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .btn{flex:1;padding:12px;border-radius:999px;border:1px solid #23304a;background:#0b1220;color:#fff;font-weight:800}
-  .result{background:#1b2945;border-radius:10px;padding:10px;margin-top:8px}
-  .big{font-size:18px;font-weight:950}
-  .lines{margin-top:6px;line-height:1.35;font-size:13px}
-  .hidden{display:none}
-  .resetMini{float:right;font-size:11px;padding:4px 8px;border-radius:999px;background:#402222;border:1px solid #633;color:#fff;font-weight:900}
-  .footer{text-align:center;margin-top:12px}
+:root{
+  --bg:#0b0f17; --card:#121a29; --line:#23304a; --text:#e8eefc; --muted:#a9b6d6;
+  --red:#ff6b6b; --yellow:#ffd36a; --blue:#6aa8ff; --purple:#b08cff; --panel:#1b2945;
+}
+body{margin:0;background:var(--bg);color:var(--text);font-family:sans-serif}
+.wrap{max-width:680px;margin:auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+h3{margin:0 0 10px;font-size:14px;display:flex;align-items:center;gap:8px}
+.sq{width:10px;height:10px;border-radius:3px;display:inline-block}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{flex:1;padding:12px;border-radius:999px;border:1px solid var(--line);background:#0b1220;color:#fff;font-weight:900}
+.hidden{display:none}
+.resetMini{float:right;font-size:11px;padding:4px 10px;border-radius:999px;background:#3b2230;border:1px solid #6b2d47;color:#fff;font-weight:900}
+.result{background:var(--panel);border-radius:10px;padding:10px;margin-top:8px}
+.big{font-size:22px;font-weight:1000}
+.big2{font-size:20px;font-weight:1000}
+.spacer{height:10px}
 
-  /* 8角形（A→2→B→3→C→4→D→1） */
-  .octagonWrap{position:relative;width:240px;height:240px;margin:6px auto 2px}
-  .octBtn{
-    position:absolute;width:48px;height:48px;border-radius:50%;
-    border:1px solid #23304a;background:#0b1220;color:#fff;font-weight:900;
-  }
-  /* 12時から時計回りに A,2,B,3,C,4,D,1 */
-  .posA{top:0;left:50%;transform:translateX(-50%)}
-  .pos2{top:18px;right:18px}
-  .posB{top:50%;right:0;transform:translateY(-50%)}
-  .pos3{bottom:18px;right:18px}
-  .posC{bottom:0;left:50%;transform:translateX(-50%)}
-  .pos4{bottom:18px;left:18px}
-  .posD{top:50%;left:0;transform:translateY(-50%)}
-  .pos1{top:18px;left:18px}
+/* octagon */
+.octagonWrap{position:relative;width:250px;height:250px;margin:auto}
+.octBtn{position:absolute;width:52px;height:52px;border-radius:50%;border:2px solid var(--line);background:#0b1220;color:#fff;font-weight:900}
+.red{border-color:rgba(255,107,107,.8)}
+.yellow{border-color:rgba(255,211,106,.8)}
+.blue{border-color:rgba(106,168,255,.8)}
+.purple{border-color:rgba(176,140,255,.8)}
+.posA{top:0;left:50%;transform:translateX(-50%)}
+.pos2{top:18px;right:18px}
+.posB{top:50%;right:0;transform:translateY(-50%)}
+.pos3{bottom:18px;right:18px}
+.posC{bottom:0;left:50%;transform:translateX(-50%)}
+.pos4{bottom:18px;left:18px}
+.posD{top:50%;left:0;transform:translateY(-50%)}
+.pos1{top:18px;left:18px}
+
+/* 12/34 */
+.nsBtn{width:100%;padding:14px;border-radius:14px;border:2px solid var(--line);background:#0b1220;color:#fff;font-weight:1000;margin-bottom:10px}
+.footer{text-align:center;margin-top:10px}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- 🟥 分身X/十字 -->
-  <div class="card" id="shapeCard">
-    <div class="inputArea">
-      <h3>🟥 分身：X字 / 十字（リエナクトメント後：どっち先）</h3>
-      <div class="row">
-        <button class="btn" onclick="selectShape('x')">X字</button>
-        <button class="btn" onclick="selectShape('plus')">十字</button>
-      </div>
-    </div>
-    <div class="resultArea hidden">
-      <button class="resetMini" onclick="resetShape()">リセット</button>
-      <div class="result">
-        <div class="big" id="shapeResult"></div>
-        <div class="lines" id="shapeLines"></div>
-      </div>
+<!-- 🟥 -->
+<div class="card" id="shapeCard">
+  <h3><span class="sq" style="background:var(--red)"></span> 分身：X字 / 十字</h3>
+
+  <div class="inputArea">
+    <div class="row">
+      <button class="btn" onclick="selectShape('x')">X字</button>
+      <button class="btn" onclick="selectShape('plus')">十字</button>
     </div>
   </div>
 
-  <!-- 🟦 分身 -->
-  <div class="card" id="cloneCard">
-    <div class="inputArea">
-      <h3>🟦 自分の分身（押したら：線取り＋頭割り位置＋AoE捨てを表示）</h3>
-      <div class="octagonWrap">
-        <button class="octBtn posA" onclick="selectClone('A')">A</button>
-        <button class="octBtn pos2" onclick="selectClone('2')">2</button>
-        <button class="octBtn posB" onclick="selectClone('B')">B</button>
-        <button class="octBtn pos3" onclick="selectClone('3')">3</button>
-        <button class="octBtn posC" onclick="selectClone('C')">C</button>
-        <button class="octBtn pos4" onclick="selectClone('4')">4</button>
-        <button class="octBtn posD" onclick="selectClone('D')">D</button>
-        <button class="octBtn pos1" onclick="selectClone('1')">1</button>
-      </div>
+  <div class="resultArea hidden">
+    <button class="resetMini" onclick="resetShape()">リセット</button>
+    <div class="result">
+      <div class="big" id="shapeFirst">—</div>
+      <div class="big" id="shapeSecond">—</div>
     </div>
-    <div class="resultArea hidden">
-      <button class="resetMini" onclick="resetClone()">リセット</button>
-      <div class="result">
-        <div class="big" id="cloneResult"></div>
-        <div class="lines" id="cloneLines"></div>
-      </div>
+  </div>
+</div>
+
+<!-- 🟦 -->
+<div class="card" id="cloneCard">
+  <h3><span class="sq" style="background:var(--blue)"></span> 自分の分身マーカー</h3>
+
+  <div class="inputArea">
+    <div class="octagonWrap">
+      <button class="octBtn red posA" onclick="selectClone('A')">A</button>
+      <button class="octBtn yellow pos2" onclick="selectClone('2')">2</button>
+      <button class="octBtn yellow posB" onclick="selectClone('B')">B</button>
+      <button class="octBtn blue pos3" onclick="selectClone('3')">3</button>
+      <button class="octBtn blue posC" onclick="selectClone('C')">C</button>
+      <button class="octBtn purple pos4" onclick="selectClone('4')">4</button>
+      <button class="octBtn purple posD" onclick="selectClone('D')">D</button>
+      <button class="octBtn red pos1" onclick="selectClone('1')">1</button>
     </div>
   </div>
 
-  <!-- 🟧 12/34（順序をACより上に） -->
-  <div class="card" id="safeCard">
-    <div class="inputArea">
-      <h3>🟧 12/34安地</h3>
-      <div class="row">
-        <button class="btn" onclick="selectSafe('12')">1,2安地</button>
-        <button class="btn" onclick="selectSafe('34')">3,4安地</button>
-      </div>
+  <div class="resultArea hidden">
+    <button class="resetMini" onclick="resetClone()">リセット</button>
+    <div class="result">
+      <div class="big2" id="cloneMain">—</div>
+      <div class="spacer"></div>
+      <div class="big2" id="cloneStack">—</div>
+      <div class="big2" id="cloneDump">—</div>
     </div>
-    <div class="resultArea hidden">
-      <button class="resetMini" onclick="resetSafe()">リセット</button>
-      <div class="result">
-        <div class="big" id="safeResult"></div>
-        <div class="lines" id="safeLines"></div>
-      </div>
+  </div>
+</div>
+
+<!-- 🟧 -->
+<div class="card" id="safeCard">
+  <h3><span class="sq" style="background:var(--yellow)"></span> 1・2／3・4安地</h3>
+
+  <div class="inputArea">
+    <button class="nsBtn" onclick="selectSafe('12')">1・2（上側/北）</button>
+    <button class="nsBtn" onclick="selectSafe('34')">3・4（下側/南）</button>
+  </div>
+
+  <div class="resultArea hidden">
+    <button class="resetMini" onclick="resetSafe()">リセット</button>
+    <div class="result">
+      <div class="big2" id="safeMain">—</div>
+      <div class="spacer"></div>
+      <div class="big2" id="safeA">—</div>
+      <div class="big2" id="safeC">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- 🟨 -->
+<div class="card" id="acCard">
+  <h3><span class="sq" style="background:var(--purple)"></span> ACスタート</h3>
+
+  <div class="inputArea">
+    <div class="row">
+      <button class="btn" onclick="selectAC('stack')">頭割り</button>
+      <button class="btn" onclick="selectAC('aoe')">大円</button>
     </div>
   </div>
 
-  <!-- 🟨 ACスタート（順序を下へ） -->
-  <div class="card" id="acCard">
-    <div class="inputArea">
-      <h3>🟨 ACスタート</h3>
-      <div class="row">
-        <button class="btn" onclick="selectAC('stack')">頭割り</button>
-        <button class="btn" onclick="selectAC('aoe')">AoE</button>
-      </div>
-    </div>
-    <div class="resultArea hidden">
-      <button class="resetMini" onclick="resetAC()">リセット</button>
-      <div class="result">
-        <div class="big" id="acResult"></div>
-        <div class="lines" id="acLines"></div>
-      </div>
+  <div class="resultArea hidden">
+    <button class="resetMini" onclick="resetAC()">リセット</button>
+    <div class="result">
+      <div class="big2" id="acMain">—</div>
     </div>
   </div>
+</div>
 
-  <div class="footer">
-    <button class="btn" onclick="resetAll()">オールリセット</button>
-  </div>
+<div class="footer">
+  <button class="btn" onclick="resetAll()">オールリセット</button>
+</div>
 
 </div>
 
 <script>
-/**
- * 🟦分身：あなたの「線取りがマーカー表現のマクロ」準拠 + 必ず頭割り位置を出す
- * - lineGroup: どこの線か（Aか2 etc）
- * - take: 頭割り線 or AoE線
- * - stackWhere: B側 or D側（=必ず表示）
- * - dump: AoE担当だけ（何回目/どこへ捨て）
- *
- * ※「頭割りする“マーカー”」を完全に固定できるルールがあるなら、
- *    stackMarker を追記して "頭割り：◯◯マーカー" と出すように差し替え可能。
- */
-const cloneMap = {
-  "A": { lineGroup:"Aか2", take:"頭割り線", stackWhere:"B側で頭割り", dump:null },
-  "2": { lineGroup:"Aか2", take:"AoE線",   stackWhere:"B側で頭割り", dump:{when:"1回目", to:"A側に捨て"} },
-
-  "B": { lineGroup:"Bか3", take:"AoE線",   stackWhere:"B側で頭割り", dump:{when:"2回目", to:"A側に捨て"} },
-  "3": { lineGroup:"Cか4", take:"AoE線",   stackWhere:"D側で頭割り", dump:{when:"1回目", to:"C側に捨て"} },
-
-  "C": { lineGroup:"Dか1", take:"AoE線",   stackWhere:"D側で頭割り", dump:{when:"2回目", to:"C側に捨て"} },
-  "4": { lineGroup:"Bか3", take:"頭割り線", stackWhere:"D側で頭割り", dump:null },
-
-  "D": { lineGroup:"Cか4", take:"頭割り線", stackWhere:"D側で頭割り", dump:null },
-  "1": { lineGroup:"Dか1", take:"頭割り線", stackWhere:"B側で頭割り", dump:null }
+const cloneMap={
+"A":{line:"【Aか2】の 頭割り線",stack:"頭割り：B",dump:"AoE捨て：なし"},
+"2":{line:"【Aか2】の AoE線",stack:"頭割り：B",dump:"AoE捨て：1回目 に A"},
+"B":{line:"【Bか3】の AoE線",stack:"頭割り：B",dump:"AoE捨て：2回目 に A"},
+"3":{line:"【Cか4】の AoE線",stack:"頭割り：D",dump:"AoE捨て：1回目 に C"},
+"C":{line:"【Dか1】の AoE線",stack:"頭割り：D",dump:"AoE捨て：2回目 に C"},
+"4":{line:"【Bか3】の 頭割り線",stack:"頭割り：D",dump:"AoE捨て：なし"},
+"D":{line:"【Cか4】の 頭割り線",stack:"頭割り：D",dump:"AoE捨て：なし"},
+"1":{line:"【Dか1】の 頭割り線",stack:"頭割り：B",dump:"AoE捨て：なし"}
 };
 
 function selectShape(v){
-  shapeCard.querySelector(".inputArea").classList.add("hidden");
-  shapeCard.querySelector(".resultArea").classList.remove("hidden");
-
-  if(v==="x"){
-    shapeResult.textContent = "1,4マーカー先";
-    shapeLines.innerHTML = "（リエナクトメント後）最初：<b>14</b> → 次：<b>AD</b>";
-  }else{
-    shapeResult.textContent = "A,Dマーカー先";
-    shapeLines.innerHTML = "（リエナクトメント後）最初：<b>AD</b> → 次：<b>14</b>";
-  }
+ shapeCard.querySelector(".inputArea").classList.add("hidden");
+ shapeCard.querySelector(".resultArea").classList.remove("hidden");
+ shapeFirst.textContent = v==="x"?"先：1・4":"先：A・D";
+ shapeSecond.textContent = v==="x"?"後：A・D":"後：1・4";
+}
+function selectClone(v){
+ const i=cloneMap[v];
+ cloneCard.querySelector(".inputArea").classList.add("hidden");
+ cloneCard.querySelector(".resultArea").classList.remove("hidden");
+ cloneMain.textContent=i.line;
+ cloneStack.textContent=i.stack;
+ cloneDump.textContent=i.dump;
+}
+function selectSafe(v){
+ safeCard.querySelector(".inputArea").classList.add("hidden");
+ safeCard.querySelector(".resultArea").classList.remove("hidden");
+ if(v==="12"){safeMain.textContent="1・2（上側/北）";safeA.textContent="A分身：横安地";safeC.textContent="C分身：縦安地";}
+ else{safeMain.textContent="3・4（下側/南）";safeA.textContent="A分身：縦安地";safeC.textContent="C分身：横安地";}
+}
+function selectAC(v){
+ acCard.querySelector(".inputArea").classList.add("hidden");
+ acCard.querySelector(".resultArea").classList.remove("hidden");
+ acMain.textContent=v==="stack"?"頭割り先":"大円先";
 }
 function resetShape(){toggleBack(shapeCard)}
-
-function selectClone(v){
-  const info = cloneMap[v];
-  cloneCard.querySelector(".inputArea").classList.add("hidden");
-  cloneCard.querySelector(".resultArea").classList.remove("hidden");
-
-  cloneResult.textContent = `分身：${v}`;
-  const line1 = `線取り：【${info.lineGroup}】の <b>${info.take}</b>`;
-  const line2 = `頭割り：<b>${info.stackWhere}</b>`; // ← AoE担当でも必ず表示
-  const line3 = info.dump
-    ? `AoE捨て：<b>${info.dump.when}</b>に <b>${info.dump.to}</b>`
-    : `AoE捨て：なし`;
-
-  cloneLines.innerHTML = `${line1}<br>${line2}<br>${line3}`;
-}
 function resetClone(){toggleBack(cloneCard)}
-
-function selectSafe(v){
-  safeCard.querySelector(".inputArea").classList.add("hidden");
-  safeCard.querySelector(".resultArea").classList.remove("hidden");
-  safeResult.textContent = (v==="12") ? "1,2安地（12安地）" : "3,4安地（34安地）";
-  // ここはあなたの「A/Cが縦横どっちメモ」を後で足しやすいように枠だけ残す
-  safeLines.innerHTML = "<span style='opacity:.9'>A縦/横・C縦/横のメモは、次の改修で“ワンタップメモ”追加できます</span>";
-}
 function resetSafe(){toggleBack(safeCard)}
-
-function selectAC(v){
-  acCard.querySelector(".inputArea").classList.add("hidden");
-  acCard.querySelector(".resultArea").classList.remove("hidden");
-  acResult.textContent = (v==="stack") ? "頭割り先" : "AoE先";
-  acLines.textContent = "（開始がどっちかだけ表示）";
-}
 function resetAC(){toggleBack(acCard)}
-
 function toggleBack(card){
-  card.querySelector(".inputArea").classList.remove("hidden");
-  card.querySelector(".resultArea").classList.add("hidden");
+ card.querySelector(".inputArea").classList.remove("hidden");
+ card.querySelector(".resultArea").classList.add("hidden");
 }
-
-function resetAll(){
-  resetShape(); resetClone(); resetSafe(); resetAC();
-}
+function resetAll(){resetShape();resetClone();resetSafe();resetAC();}
 </script>
 </body>
 </html>
