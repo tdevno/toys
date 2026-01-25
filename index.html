@@ -122,7 +122,7 @@ h3{margin:0 0 10px;font-size:14px;display:flex;align-items:center;gap:8px}
   <div class="inputArea">
     <div class="row">
       <button class="btn" onclick="selectAC('stack')">頭割り</button>
-      <button class="btn" onclick="selectAC('aoe')">大円</button>
+      <button class="btn" onclick="selectAC('aoe')">AoE</button>
     </div>
   </div>
 
@@ -175,7 +175,7 @@ function selectSafe(v){
 function selectAC(v){
  acCard.querySelector(".inputArea").classList.add("hidden");
  acCard.querySelector(".resultArea").classList.remove("hidden");
- acMain.textContent=v==="stack"?"頭割り先":"大円先";
+ acMain.textContent=v==="stack"?"頭割り先":"AoE先";
 }
 function resetShape(){toggleBack(shapeCard)}
 function resetClone(){toggleBack(cloneCard)}
