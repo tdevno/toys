@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>絶妖星乱舞p4デバフ計算</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", sans-serif; background: #111; color: #e8e8e8; padding: 1.5rem 1rem; min-height: 100vh; }
+
+  .title-bar { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  h1 { font-size: 18px; font-weight: 500; color: #e8e8e8; }
+  .reset-btn { font-size: 12px; padding: 4px 12px; border-radius: 8px; border: 0.5px solid rgba(255,255,255,0.25); background: transparent; color: #aaa; cursor: pointer; }
+  .reset-btn:hover { background: rgba(255,255,255,0.08); color: #e8e8e8; }
+
+  .section { background: #1c1c1c; border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .sec-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.875rem; }
+  .sec-title { font-size: 15px; font-weight: 500; color: #e8e8e8; }
+
+  /* 本当/嘘トグル */
+  .truth-toggle { display: flex; border-radius: 6px; overflow: hidden; border: 0.5px solid rgba(255,255,255,0.15); }
+  .tt-btn { font-size: 11px; padding: 3px 10px; background: transparent; color: #888; border: none; cursor: pointer; transition: background 0.1s, color 0.1s; }
+  .tt-btn:hover { color: #ccc; }
+  .tt-btn.tt-true.active  { background: #1D9E75; color: #fff; }
+  .tt-btn.tt-false.active { background: #E24B4A; color: #fff; }
+  .tt-divider-v { width: 0.5px; background: rgba(255,255,255,0.15); }
+
+  /* ギミックグリッド（アイコン＋ボタン） */
+  .gimmick-row { display: flex; flex-wrap: wrap; gap: 20px; }
+  .gimmick-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .gimmick-icon { width: 40px; height: 40px; object-fit: contain; }
+  .gimmick-label { font-size: 11px; color: #aaa; text-align: center; }
+  .gimmick-btns { display: flex; gap: 4px; }
+
+  /* 早遅ボタン */
+  .vb {
+    font-size: 15px; padding: 7px 13px; border-radius: 8px;
+    border: 0.5px solid rgba(255,255,255,0.2);
+    background: transparent; color: #ccc; cursor: pointer;
+    white-space: nowrap; transition: background 0.1s, border-color 0.1s, color 0.1s;
+    min-width: 47px; text-align: center;
+  }
+  .vb:hover { background: rgba(255,255,255,0.08); }
+  .vb.active-true  { background: #1D9E75; border-color: #1D9E75; color: #fff; }
+  .vb.active-false { background: #E24B4A; border-color: #E24B4A; color: #fff; }
+
+  /* GC3・マジックチャージ用（排他トグル） */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* 集計 */
+  .summary { background: #1c1c1c; border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem 1.25rem; }
+  .sum-title { font-size: 15px; font-weight: 500; margin-bottom: 0.75rem; color: #e8e8e8; }
+  .sum-row { margin-bottom: 8px; font-size: 14px; color: #e8e8e8; line-height: 1.6; }
+  .sum-row .lbl { font-weight: 500; color: #aaa; margin-right: 4px; }
+  .sum-empty { font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+
+<div class="title-bar">
+  <h1>絶妖星乱舞p4デバフ計算</h1>
+  <button class="reset-btn" onclick="resetAll()">リセット</button>
+</div>
+<div id="app"></div>
+
+<script>
+const IMGS = {
+  atamawari: 'data:image/webp;base64,UklGRk4DAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSKIAAAABgGLb1vLmhkkxczKF+FhmRyqxHUBdPTNzq5gZR4COW8Wsw5ynKyJiAgC0HG83eL1tJ/0MNOcIzt/mkMhRzC5tOnJE2+eoHIxQ2R76N2SSys4AlTNFD43rKGA/btxXEw+lqacGLdlQUdzZiOckqvZ+1G1SjRqtS/W5C6OOkas6DEhRV1FrLS9hlGUwawGcB1XNGFCBURvgO/0rfxkEwGSUEAdWUDgghgIAAJAMAJ0BKigAMAA+bTCTR6QioaEnOAtogA2JbACdMr2B76fx8m7T2J2EN5t0vMb5ueml+gB0uxKwPLO2FH/7St0Zaf3ZtYv6cVwrtg6OB/qDUp/PiAWIYrcb6U7YE6B3iCB4MDbcaLfxnP5fSgAA/vGM/o/Ayb9o2SYTK6Xs+S4Z+/SJ/40lXyz9q01f+GcahrNSEU0c1zIi+J3mJnkFe5PUN2dkRRFaDXmd8f7z7+WGCDA+Mcxu18pn8TxpJmW8v4znhJEny+1u/HaIKds5YYN5VVgrs5Lt1UdeBQQqSy9UpuDQTmBoSiklstSXuxq17cLHuH7mOnFzz9iShS/3zzVm9cChKIfZWbH4bc0rx11EQFQu5VBnYiCQruVNTITMt4L9SmOZxG9VpDeQ4fG/TcW5NWp0bWB3B4F7ZWbJo9yiHNoYQrlO8Kv6sRvV7zYfmnntzSqbKN4p022n5kIqh7Z8GN5Fe/fsX+P+gWdWeJdn/seDHQq/BNsv2+EQLAmmVA9EAMAwXDQ+JmGJiqPpiJ5bj1Z22T3HI0maTA8ZOeX4i2+34iEnk8tzSWkgl2XiSn0OTuX36Gy6tzSBYVHROA7/DbenXpfwIl1kqqtZlcSRwfNPAwmhHIJsbN+mt++1m2ZMtujylBXHouiXmocgx/ZcopawxzAt6gM8Vv++8A8AsmZp8zfpVYXOw72oR/JVr/sJaJ3YwuNGFVa58g7I5LMbk/6FKTVvczf01xJA8c3K/1ePUuDCK36r2oIAzU24Erb73kHvKgYN1zskBKYF0tUPrLyCb51z4X94O3XH9Tr6SgZR8zpDvNFc3WEupV3eLdCPMOazX/y5KUel9rIZm2Xv7fn+oAA=',
+  lightning: 'data:image/webp;base64,UklGRpQEAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSJ8BAAABuTJE9D8McgQAUiSlqmVczt0lPTTm7cQOH3Bfd+vpLhxmU6w6YgIm4PJN1xVSmkTAr0eO1dP22BO3pZSKgUC9RAlUhu6Y6fFzFQfVQAROFbx2pcfwFhNQqxDgVaU1Y1NIADUji2MliyAGqCYCHEkb00KAgNqRw4wYLCVBBPzmTdCyeIfRUqCUsUBQfUQSgEIcUhvylbn3VpQsj2oikjLUck9u17qE4R1Gv4gIrAQWBhpG7jLWnNhCHFAnErqe4cBTbTO8rrBrVWjOcAj6CYIkJVLp+qCvaS6yoaHlDW/tObejZEkCID+BgGMJQ03PvEZ2rVLI0Ed+SJFAaduunDRXcX5AkCKk660PeixEAgpg5go3tL3GoX0HViWQJgHyLeQYPNXyxisT67wGvmv0fNQ3Qhxlza4dBccggBkFpKGGF5qcBJLAj5KKdxqaPpoJbdiyKqIJCLC1wF1t743lDqTAT8+09U0NzDiJVWtYQwtzDR9NRDKFmIJ+jnluos13GJGMphCrMjSmrPIZBfzSyoIxNtA3MmMRxJwqZAQgoB8BAFZQOCDOAgAA0A0AnQEqKAAwAD5tLJNHJCIhoSq1XACADYlsAJ0zEvi47fpcxNhN7dK7NvQA6XCsoeDvh4Sxvg7Ve6AcFC7+YPgCYYnKlMuLW859vq3b9U6Y+bX/84f5EVkfv+ONbg+QLGgn3lab0xyDNPMb4CQpCmtX/T5lZDAA/v325O0n/0ZFDdCG6NrG+OSeb22yBvjXTyLc9xQiRpV4Ijd+a206LkkYxwRa39H35PPWnFoEk/XNjua7G8ahuWwV7UyMqWdddAy+TLWPuerU5rKI//+jovRXhyNruZElB51beR86oZrjQP/zaPDjtf5lGCHeQ0+/W2U6NABVuqyuHFHkWt8yOxOaeTDJYBsAT9cDDCS2kMlnr5royYvljQqb2/JvGujp/fdU4SyxllLDzEf8aTFY2t+/7AzQh6Uu/L8tR89bCsugxiJ0kqbg666nQMihg76RuQoeRKx+lATQCsrqv3cx0A8M/FoWwA1FL0iWOhUydy91F979A0hkpuJdUe6P2oSE0R2JTDiYHNj+yNakPVK4gMLidz1Zm1dXKdZqBq6WXptUHSJL0RQNnPaepGF0oTzlWMZ8FFSoZNQW3kK7UA86HNTLVBhsRJkTe/acDK7/i5uFveRUy/Z+lGyy56deMK2jF5LQi5tfal3Rc5KzyuQOz+c095Ii25l36FEc53b37nRMVFOsGpgUwzxTAUavJ2+ZrDnZbwaPgD7TD74BqVjMDO2HXhafiMdy9RT5edXneBm/WnBdVvLxyy16/FlLBQSnoLcjJWuW7rSTuUlAbaYOomDshSk8Q0ZeTwA8+cbXcLcOzqsb3Q5KuSzU0q+VVZK+PZajHcXqzJkch3n9z0c6ncViV+P6ufacUr/sTiU3rUe1xjZjswIUUsP30dJMRnvcAunBXVYaFHYvvu5Ar3XBO9TM3CFL1Gc8Pofs8ksze1+WdI1jjT73tyGKAKoAAA==',
+  kasokudo:  'data:image/webp;base64,UklGRgYEAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSKoBAAABuTJE9D8gV5IkRbKyunrgmJlJPO3s/l89e9ITmXF5FoYa6uGQ+pSICZiAo/ceXVkV06BNZ2HkhScv3NugWSUHiGiMCNAiWmHggZZYyBkWtMliqzatSN1xMiXPA09pzFNACazYxNYYKUchQERjRIDnsVUxsIgCrQvClIIIMdEaCE8IINBNAqIj/y8LIB1h4HSCQIQYFmmPKJ4VYJ4QLREFctY3kU0hxyOtCEUrjOWe83YcWsdKjteYwkJOqmcs8MxE5NSpZY5HGhMKS330nbfljYGEs2rbvgPLvJIjahEWUVI//DAyx7asSA199cHMmmuntmhEIaIGEZ5nTXzyzsyaExGAwlDfgKUoSw4c2aZZhlOBhbRSz2c/pECJMAIAILzE0FffOHvO7FqhBRiIvxBiGcbcd5/0sGPLoOLE0NiMYWnrjhzaoFgOADBNJL76JMEiIQUqC6OU+KFnQduxZ9sSTSMgLGNhoqfH27aPQW1rJDEzl3Ji27asCIA119djxDasCSnQZCEz0TdWCqyIMHAKc4XQng0xAo2KnLEwk5jLOQJAW7FpCSEEqgJWUDggNgIAAJALAJ0BKigAMAA+bSySRyQiIaEqtV1QgA2JbACdMu0BDIirHazDeQntuLdwG89z69n8Y+zVzdat+dLUMomQX33XaDTQIW2MQAgBAbTPXMpnup6tizhm/noLhKxBaFWn7HQDRywwAP79uvf8+P/XE+BN4si+Nu9FzRXgL4DKHfw99Bej7SsZfUgb8ULY/raMHZOGkEjHp1qVz2cLrS+xACEHcIFV6x017V0suk6WiZGZ04s9dI9+Tdfa1RLhn9OCbKNq5Kb8wc6m1ZFBauMMKFC5q6mV5kSlYnInu6RW0CIcmGNAtmFcGdnk5EB8MwFYNcK/yv3xG//6dAfWlAm5ih05xl+7nWcPdkDRVHwMv5uNOOfeKan7P4Es/e/4awObJR7Tq6YBca371oafr4Aqdt5ruJSs6OAvWRmso5ufyHrGpbj4bGsxAqA9yMBBeTtd0Ju8kSn5rbPibKRPurPvI5lJswENsPEaDWTLRZJawjsRvqOKXtua+ukcvQJDKEuOHvcK5zykkQHKAS7kBw/euCjnEohX3pcLq4AW+nS5k6cG7GOBGfv6/efv8c9QD9+iCJXZWQVPUT3D1KKWSX3WmshTU66uL6Ly50SBbGozYMiBXV77drZ4lWHMsyi+pEKLlVz7IAminsOzMy9hT+wvdzmeZV1znlbkJCUwkNGV9C0XV/0JZOAdSoQi82a7nJ9ItE+bl9VEoYQVyVAAUBRoQzlebGkh2Z9oRVbgmX6Ta49fctsMAAAA',
+  shisen:    'data:image/webp;base64,UklGRvgCAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSKAAAAABgGLb2rLl/m7xz25Js3ePlt0Vd+8kmtsAaAzAfQaQ3SG5vO9DJUTEBABoHOxscd3dK+Nz7JVgAYDtnsJrCZqzV5rRnleiU0NU+nqp9P5/MUll3HVC4yUOVc8jgXU3AFhnee2l8G3smMf1qBQ/lLUvmC0Z8UvDGpvDIBgG9n53XhSDqbB2/otpI5jrZn6y4QXX4OZXp3lwTw/09gyV1fizVlA4IDICAAAQDACdASooADAAPmkmj0WkIiEarAaoQAaEtQBYjgRW3ZrDbQrdtbz1Vk3vt74gDFukTmV/pmI8UN+QxoxJAilu/U8vtQ9GHCLSY8XctZiFDuy76/2ioc0Hi4YelEmnruqccjv4GSpEdwAA/uYxt8uXkO+1/fs7/NTGVK+a1FS0zM//83JWR8p0qno5SzPw2JcXymHPI6Ozl1foS0tnhjPsSPdf/i3I71YYc1rXVVyjkJtlLxGHGs8fu027BpC7REcxgZqNRb1Q/y542PauUAJY2Sjt7uwomrGoAOf1sHBXb5OKb2DXQfbGztjogfojDXFyz/17/9RTSrlTo77TNRNbS7ralyjdq2Ztd0uR882r1g2NECmWgygPBtBMuDy+e9n1bEiLGl/bgYzWuoeK3o7loToucvH24CqJJaqhUbxJIRycg0Gn3Ran4S99X5LjfrU9x4XrfGC7h0nXGFY/XD4ISkCJO0kMuAFT6ZSxuNo4qzbq7+hNx4LkKdzz/GKNIP55n9zimyuwTlHgLysnGIsAt7XqTjIH2cbXUSn59+0QqfKGNfKk1e38vmqv14QTWbvNrWBdfYYWOCwcqvmlcvEwg+s6zw6KfDPED3j1tUl8Xz9T7azIdNA+ebMU9+51TxeCQUKsIpCLWVU47pyJ3OEBj84Dn9cZrTlhApWbtP7VeoWPCxl/tlPOvT0f9QjGp0RMAJkGCpj4qGoQZHxF7FjZnZDGJ9PUKWo/FtD7VhyHzeAA',
+  honoo:     'data:image/webp;base64,UklGRl4EAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSJQAAAABgGLb1vLmhhOXGTBzoqNjmSQzc0qOYSJcxa6rU+AqJsdVzN/36YqImAAgsLq6THljyQgg9sbitQrpNzbPZW+sHjLD7t2/NfejL4y8wbLAxjQAzza9TRe+8oce6dyU8bN+kcasAr/275A6DOOvgoEnEs/DEhDULv5tywnC0aPfPTVBXjr1mxklqNqK6Xy12qx33PgjVlA4IKQDAABQEQCdASooADAAPm0uj0WkIqEXHf5kQAbEtgBOmXjh89j8yKtf4T778XyXqEntuvMB5tPo53kD0AOlU8pmsQcxfriTG2XYBeDXeDK44EfU3WRTD2ix6sPZbknh2B0Bag87PP3Gpr+ABVzDoiK0+Lh9TCunaVBMBKFewUO8/y9liS222EtHJOqR1312L/+sbPcF8AAA/vTB3H67Nf8Yv+GHSX70wi8SiH/Ef902aUpQQp9Vx3rH/zvhLZ87s71VubCNKLtngBmUka3zr1dQr3r5P6yao6MmJFaqA2ePNbIxOPU1D0HfnEdqIj/+slawsdwy0U+HpZv2AG91+mA5WmdocZtoEHAc9ToxpKGYaXFa0T4juenJqMPGQtt/NyL7Dr4HDaXzTz1uJf7h0MdV9K+N2mJyDSxqPfIJQVh2v6wMonH8wH6gD81qj1laUfcaDKGJvfamKPgcXPO2OJphp+BpAt1/oeWPlD7TsjDK+zFZVb2HjCAJiNI9t/gbRmsgnfgsgp9z7XWvY+vH7tNCK5X61L9LfWKhCZtJTtOjY4GtrxszOF/5EsUsruqd0ji/8b15ZK8dzrSJSTSpLrtCSdTM3LX8dT4A5XhwiOuZ+zlqFnv6irp/KdxXtpjqHqnR9DUfHCVfc10V21juQURIfHYZMn6hOTSstKBAIS4FDynmsTMrmiLcSPKgycxTA/Uqa0H5kG6etFQ0F7F86RR4M1cHzXf5BN+AvS5N3Wq/tm7HK5zYGyZQ+mEUjg5rDELKPfkcgx+eQ430/i/Z9s8enB7FxDwQOEeEkJOtD5b1fRLyTpZ1nBNZDMi88q0mxR8NPKE0SS8x3dwZmdhn4D6qwz05PNCB9yoJC+hHRuAtsHgV8+za4k+9+B25qxQ1Q5IOIbhoChMaTMHcX9BAY6ysl00BaDLt9v//mj1u6ab+9B2m+MKFXrZu7AnwqocHiKjnfu92/x580HaAFFh+X+uQvl/eCDNmqGqhFAqsGQvWZjH3mNUjDnH4ta3WQFwtb7C/Ns1gY+P80UDKAtpeYtcWU8NMR6W/7PtgVkoRoFYkv/x08z+OtGlwZE8IKm4wx4VbxHhTIrmgonJ7y+ubbe1pfmAanolsKrKOXB9xbOHo8yOQyCLXMjUUnmLYTyfoo+molNVLjELp1f7sEoZ/lIB5NW95fm39azX+JjLcfIeJAZu9VIx1h7bPeHVpL+ASPPmOGr3+IvN6O/4s77wV5fWJJ2mBQWSAAA==',
+  tsunami:   'data:image/webp;base64,UklGRooEAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSJgAAAABgGJt27LoTegCaN59Fw6RxAIcslMdmm7AJbtrc51ptHF3n/n+L0+IiAl4vc61llOCF7Hy46G/uX/DMH38Zj+84fiUbj6+4fnovsHkLX75b80TNlfY8CuY5ABMNzjc6ACAmybsMcqCbzUrQq59PPiZFCAgwYTf21CdaOHPXjRDPiDUowjQAan06C85CaBmpE4vfjy/mCjg91ZQOCDMAwAAkBEAnQEqKAAwAD5tKpJGpCIhoS47+ACADYloAJ0zTAYRQr0L4uBFty+dj0zP0AOlZn1/ID7HkHnCfTP9Pwg7Wm7PZU4iPqr5of+045IwroQ+nf2E+A79bP98mDv19gsZb09Fdsp6eSIZHmX/yigVrWClUhDh+QdPQeDG6mO9chWuW0qtwHOyhmX/pz0C+vEJnls2GQAA/u+PcH+C3xxJGPdUUwarL/0akmSbKwPY/v/HMzcoOZS99mNOeSRoYxO7e1CdRMfksltkym3yOZt/2HXG+T8MfLYaskjIHRPxX9b+4c1EnUq9YyMPLmziv/IVPJshNnUZRqVC3KlQytpxkwtf9btDX6gGcRmnkT9u0GG491P3RNYVa8/Yu66OBc/DxT3vq9/8f6cW4/73o4wilo9gE1mJW5Udq0xfHgpPBnr/k9zEuJQ8/cEO1bzluIQqtz8Gh8uHrz1/0NtH7ga8YVx02myn2/lwC4f5qhBj/IKBLCJeWqn+NsU79UsUm2Wr1oppZSRvr24VedYU1vK7reUlPBZ7Zt4dysQvQQ9c6HlTxx/2+OCumU1J7pcPsA1Z87+LjlbjhQEmz+PJiZw3/+f8iqr+8Uifs5MO0+FwhMkxwJYW9T3WANGJrbaox8UZKyHCPVn5I53m2Me2cdm18E3fEIwkaekUPXIgPy6+ac87H2ElujsqHlG+t8dYgxckD8vaiS76n39/Ehc80pKPDMlpagUq+nHs0gf+WK5j7m996lT2xmVUBj57kW9SwHio+rG/RPgOBs2udd+g9llw6UeLfDn0pSrCCOu8cgKBlIZXObbsOO4dXGzv91tx244qZp7ixmXCkCp1PTip1B/eywGUSs47LJxmkrU8NDgl4QkBcZbliEabwcMaMFVY4+R1FkNC6Wna/wV53rw2l6DPziDfN/tUJ07Dv+5dCgryOOYYql/x2id/WNjFXyInBPhbyeuCN6as98V/Ag+RIrzcNm9OH9+Kb60ytueWpSE2xPJIsD9eVOKEYO8X5onwOniVeIDlof8L5MXLfAsFUtmr8jDh1sYRcquLF9bw2mMNylQOSWUEZGrD2dgq/7xEtQsc6nG2kPZdiO9ct10HEQ/Zr27N9K4Ww0GpX/r0uai5CR8so0ebNFmbuiWvJBPkIHEM4WLD2sBmxviPMx6AR5Furax7T1R/a86m8j1xhxR2DPXAX3+gKSBHyXz/fRDPi249xx3aqtLzqsRb463V8c0Ff2hMX6wW//x05OUE5ePu1XOHWZfw9ZDXoZSCeUibceEUCAaJl686VkcJKWAA',
+  blue:      'data:image/webp;base64,UklGRgQEAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSJkAAAABgGLb1vLmrihGyYnmTABlLPMAMoNYHgM6UpwyOVbcOm5dFTPT97/aioiYAIDfXpjkdno2CQCqtVeCKUC9/0oygb1Xov5Xqp1LKjUy1X9D6q9UW9tEZhySwgOB7QgAmIZcnaV5+Dp6yMVFVokfSkpPzMp6/NLUZtO2g6Fv/XcLXrDlZW5/tuEHe2PjB6dpcOtcvPh8npfhzwIAVlA4IEQDAACwDgCdASooADAAPmEmj0WkIiGY5vxABgS2AE6ZqFryQJUP8Bi6dXr1AbcPzAea1ponoAdKp+4fpIXOboSPbe7+WjDpzRvJb7p+4Ol2A+e4L+/hhYYa+m9NI8F3yqyRRPmuLIemgT7WgzT69Kfsn2cgBgv+531EOgNn3GkfMvAA/vufIrf2vhV5lmKVV1QUf/+ijXZoqiT62YZZ5F/8oc9oK8G85XPpc4urH2KTcJuySaeHc16MiIe5PO1ceYf4V2dQ7FvC+2z6escGSz8gbf/9M0fz8PhE9ICs03R30UtoHptvKNAGTs2T6lU/eUMgHSZiQyPaqz+kXuotc53P/+/ECs40J/2MI1oGANspyJ0OEJrrm3JlSp2h3JlMOCyQq+jHHt4XOl2cGT8sjnDOHfW38d44k8/Sw7lmPOZL3rgn7VVD9B3vsQGlly/Eg5rtQzvBWvGlcF47MpUyFN7ohMC6c6f3fgTX+OB3gTxfkcuN+RTbstTMXzkTajDiGx6DyFNMfiIUp1pyYal2B4sUKtmUrW+0Q30NfurB681M4qKpUwiXMUvXNfvshkS2InKI0Y392YEVNeatBj9/8ta4BwwktX/gDgax0dMY8V6c5ncrA7Wt5n+RFf+DwY3GdqWyyaszBfFPsUw1hcq8UETiZGZEC3Uz5j0R6sNYFSZc+sDHN1RyYt9RHLD8Dn/k/wAlP3N0bOOppqUouHgL6hrzUOK5ewCRsx2q4nuFdfQL+Y8/ZBZy3KHAH45gEuD3WY3Ia2T95ub9cTj7maLLUdnRSurQbuudZX/pr0aMuwGcAvSJa88xCEcRmFv9SE0pXXcddF2P6MFBk8RcHYC3Rt6+A2dpcbr0hDGHL+a5f0ouYYnKd+lkHZd3p7+P/w5/KLxDz/ucpy/Nd/kjoScjIPjFlGJJJAXtkvVgnGTbayzQuPS7fGA0/D6vfvk1E/lnuXMyAN/B30CYE6Gi+Nb7f6d9qTpkAFH8pZoXz2DXurl0S29TT36TN8f8T3wdHZwviQ/22+2SX3qm+dxOhrY0VuM4CjFH1Ido6jx7rLZao8/0qT7qK1vkyzv33aEZSBxuO9x6fAfmA/OA72w3bHsQMyJcbRVuXAAAAA==',
+  purple:    'data:image/webp;base64,UklGRjAEAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSJkAAAABgGJt27LoSXgkQXN32YAtgORLgOSNZGuwZI3IuLtF9+7ukn57p06IiAkALItnu8LunxUBwH7/S7AMuB9+SRax/0s0c0FlZ4/KBJnxf0NmL6mMOjQ+6yqkTwkMzACgqL4LtBQEo2koxEEarKMHfF3mJOAoqrzz8dpQgkd9l1tTA55Da+yGAQiYvWFajkBYdftsb3f3ZD2GvwsAVlA4IHADAABwEACdASooADAAPm0skUWkIqGY6zYAQAbEtgBOmeFiYI+9BRknjgwH433jvmA/XLequoT9ADpQv8F/w/SAu7P7N4R9Z2Q6Sh/nuE/3lqJCYVsbmmeSJohvWLLyOY5aq0qvqCgGO8ORPc0bZbX2j3d0kESEcHuiEbxZVIgsZn7yzexTaH5BBYNWmT3vYAD++JOYlxLE8KYHapuC/43D58i7m0kS6+qvj0n5KFgxLpPwYFPHYcikqbdUVFGIx4Dw5vrnHhtc2qNNOsUeBwlxDTPYqEMc7qfIuJpJvwdqp7Cq4OtnJTdwFxU3MMEdp2alA2FjzAaAoU6d9MUMNnG4N2aJ0bM0M0ZgGxDg70eXG+I0XDCk3K8Wil5k7hZdFl/JkP/zYVDmd8i2ikjDd8OHZ2p+soLTDHvXjf5xnV0A5olCtbaSVETEdXsWrAr89wp6Xx5BKahpV/sZGzeJAVP+0J3si5HifdjWZeBHbHldDueTtlB610EbBfLsHAMmS72k7M4StMlwnCNVJ291jOOPR8ucZPz2L6VSxuMOaNPDk5HLHKF6NL7ktL2Q9rP7jv+hL7zKVX4ZPjsLH56vTV/lObKyFaqW1SWSpxewoAwwZFa/Wz6Fk8Xfqu4PHQ0x7a+g18U7fd1vgIwPZo3OiFDDe3CLP0gieah5YJ09vZv1IIapXIAqxYfeS/tPRSvniAPcE2i6ZWPfA4KFqSfJsBQ312MCOCOtZaugihV8pM77mlKy+WPEDEePsOY080Ne5Q50k/NyIu6DqA/smX/u/sQw6GmnBuNDbk/deaS0jKAp/HaeDEl1yBwzwU8ceOIjMfU81przRjMz994xU4dnct7eYAuAYvuzNt7LQZFt/n/c5ZNet9OPDOEa72gcK6HnzpbihfXx5XBal8LclUs1g43RlmcBtxpFszmV4axCqBkfnc+sYM77bBkR6A8blCD/H/2djRt0FfedMRsOqx3kP1dmPe+AxlnqgeuFdWXIZWpqOsjT78QDM4l63qqPsgUEPUShcblbkr1UWkJ8BOF77iEWfQw/Ove9uIeV2i2mtiNwu+nS9issr8HlT/73Fe4eJHfqx9M+n/wOUTCrTgVjT/l6cIpfEah8aSfc0jn+cUz6bX+9Tcdf9IvFO4XSlaP/0A7bT3mA/XXG7r+Ht3dl/7xbKAAA',
+  allagan:   'data:image/webp;base64,UklGRrwFAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSCsBAAABkIJt2/ln71+zbdu2vb60JUXbVltctG0kO9qrxg9/85m+v/IXImICtNOn30HhHxNxuhlPwMUVzoOLxAPAcCUkYIXFVwpM9ApvhDLgTIAnUilwgOf/XrwoDa6cJAgEmDJg4rcFYGGKwzjQ67UPQsWJYd0d+Q5/gEAxAnjr8UC6yL5+/hGY8mPC43y1JUOXqmVk5JK1wBMS8iGF3LFMFxN9OhVRaara6pENOwIujhOELDxsoylEXVsN/Umlaenb+OXtcThPz6RULO5+tp+hvhaN+hdCVKqOpkVS99knUwqSTR53pVhqalKoSGoKXcfA3rP+gcVmkQRBstjkXZ2nnYEOnYJkp2sbOIa3Xn6QPB75cVLmYW2gTUfyZehqmZoGFfdvbw/ku5ub6jCQ1ABWUDggagQAAFAWAJ0BKigAMAA+ZSSORaQhoRqurABABkS2AFt9mhzP3fzIqg/UfwBk0dXb1G/czvwPMZ+t3pIeoD8gPUA64D0Dv2A9Mn9o/gw/aL0dP/pePv1XwT713g3xJ0Q/419kvtvDTtY7yRlr/Cbzn/Aa4NQA8OLOz9K+wZ/K/63/0BxuCdR+FLgpXpMmYLh/QBwscumNL/IhCWsEPKvOcKoCEAaWGcoOlEyhtSK/eo+qD2yIQKftnfn029NcVoAA/vx1Bdh/pItgKemhxF0bfmAnGpHzI/NHpUT4koZ7PfUY55RKW0e3wzCH1NGYMxetnsIkImMjX5XN8uXe5eNYcgkWn6Z2Dgt/Gv/9IaRuLYtulROinizA8euIAkWfFoFiGGrtZmP20inVUto2iiKUXTrLiJESXN6YMOgZfKHg/HGiUyKtxtqeFF8FCibogLZDE+DgNZKUIrFH4d1VvIpWiPAZe7q4QszF8/P7Ed6gQ8lBCPYKFT74pWQvDk+gQQ9GbtFuT0MLQDk+DvZUD+i0IXbdovXKI9H70f7ddswy3ZSR+ib4X/OcePwWj0r3OAm9dXqWpOrQBImDicqFwux/P/f2Zn1bvUPczH9G5M71M172MB+B+Jw6f4VI3TTTJU1cy3/5+mVRYSN0i9/Mcuj/43XuygAv2qp/9u7ybkTrkA/n4/puuBTbYo4e7UOgDIkhLhMdZX55xG0joPKwrnmqCf06gY7A3a2C+byZEIsiEjWx65nyTLiZxE8WyO+UqWnCW930uM2ihmna6+iQFiHFQd36sDZ3ybsn1+M3952tJ8Vs50//Fg6Rb2aeGNfkMDKWoydHWv+I3HvvikE8Yr9XKlJrQgWRxAiQJ8wVy12IRDGdbJdOh+4d4T9g2Ow1BxDj/Cl08Fu2XIONhG53/UBP9ykB3FiWkW/RSFUIOW6dslPDD3Mone1TOJ8DXJFh4Dqc9s16SimE9uffjukvmnZ7XfWaPSNJSOmHs1bXowGTs3Bd5jeumsEUF1OL7xnewQ2Df01fDfSkcxu82p21GHNZe6nU0Tl2n02tBk6f/J/KTov8Z80Qvxm5pI53B1a1FlOFGirRNMeV74P//FPEhvvEeXfPd2hanUwTf6Py8QsK1GWX/8PpVU4mzrY0NUhIGduKoE2004ZiSQ3rj3QKPru1P452CK740LHSFHjdHDJ2/9rwpmmHacxCAtgnzSkp4lSw7YezDMA8bi3xrD/lF8YmUJo+Ftr/nySnxymRe8mFFeoxrhmT3OG/Z16y2fZvGAiyHVrVZaf6BJl67intGZYU+awdDgRmRCbyudjE43hzfwCBPcRdiovOOgSpyt9iyyIGNERvpXf4r15lE9g7CZQDIOy2s/WsVJLx5PW2uJtt4K1Ac/xf5czABzkagnRNnx81ni4LrK1VFn2qDCNrPGxb800UKGD/izSG2w8W6faHCGf8+1im/wQncWurKHigJXPNwEABp8mBpzPnKwGfb8wA7eCCeJOoPXKfcKXfv6AA',
+  choetsu:   'data:image/webp;base64,UklGRuoDAABXRUJQVlA4WAoAAAAQAAAAJwAALwAAQUxQSIkAAAABgGpt2zHrHUfV6T4Io1vdiHMCdrY9R+DJ2Ix2tJHG+vIOETEBk4vkBMXKfSv4hMRfzfYxQfMvOUE1/m9SExnxERrHBgBBbXcPLhIs8tu7+YvRYbX8YAdVLqyNcV5taSiDjWnu9y3cGGGrzNwm314ybFvcX6vEgF2qxysGPNgx0Xb59vZ2ooGNAQBWUDggOgMAALAPAJ0BKigAMAA+bTCTR6QioaEqtVlYgA2JbACdMvZ/vIEqf9p2tEulgD1AbbHzAdCLeAPQY6Wz/HUCzkZ9HH50Ts49dDLTJpXlI+oidU+Qb39/DrH9kNuZo233HZU5qlzcA4BhxG09v1Jjw9mxIxT+5u8tL6ZpS2s8Q7gH37ze2779i20AAP74cHAC9409R89tspfEXbP8wefMnVsG4Gcbp6FPEH3k2/Szcwyq0VXCdkj2kx7w5pcimhyvXH5whj1lLAjTSIqdTY9R7mE5Hffe8nGGOlzmc/bdA0zlI/uk+OTWtkSmtV52gMSjqtfm6MTG03unECbc400p/A2WcCHU9e/YAfznPiCeMSTsVSPscw3cGVqKBiRdDXcls8VhQHpx4fCHe/p6iMY8ZgIFUeJstpsAo4n6/TMFjG9UA3mS+nprawHiSw/hhp73UL8nf+EsciZKfUq0ABIvb6nCBeUfKAabq67NwoUrYPznG5JfjmR3k9Xc+1/HVhsVYKr+b227h8e/QOboEMHahwUASd1Bio4cBf2BXG989QV0DV0tYlS8bSxl8/VO8jeSRYK7BDrsZBsadMMGPgE20bbrVGDh8D0GLO/F87RN7o3TJuvJtqxewOvhcjNn+Lu2fdrDR7yPh0vTTMnOKRHv51yzsR+jjP0AONmwrp1XtlUulsKwfH/fFwtaZYHmU5PHMHb1/QrzxPcgHaywts64febYfH5y15/jDCt4uKdDfns1avMev+rxHOvQnOP7OjPffIVxwlRIP+P+v7OtlDhp49+lOewMSXSnzWarD/ose46qorq1tbZSMjYkPD7hYC4fZaXYj98A50ppBF9KP17meviBASE3fIZEKX9mw3BX4pqxMNFKoRPpeSUM22MfklAAxmfWK174Wdj/VwHkKkpwf1SnJZnkMz+tj1gU5x5L6DxEgIt18lirz5u2774/sX9/j88AN79waBcfB2Dfa5gbbSyuM6svCcqBszdV16+wLsU6mGFp8LkbyN3k1V3M+uaReZ+7Z52RkKNYH9+TCAtegV4qd684jY3VRPuftkN9bLK/0yY5+BB3AqOlRzqAIF6pM9gvvixSRrLOLlmoAAA=',
+};
+
+// GCギミック定義: { key, label, img, timings }
+const GC_GIMMICKS = [
+  { key:'atamawari', label:'頭割り',      img:'atamawari', timings:['早','遅'] },
+  { key:'lightning', label:'ライトニング', img:'lightning', timings:['早','遅'] },
+  { key:'kasokudo',  label:'加速度爆弾',  img:'kasokudo',  timings:['早','遅'] },
+  { key:'shisen',    label:'視線',        img:'shisen',    timings:['早','遅'] },
+];
+const HT_GIMMICKS = [
+  { key:'honoo',   label:'ほのお', img:'honoo',   timings:['早','遅'] },
+  { key:'tsunami', label:'つなみ', img:'tsunami', timings:['早','遅'] },
+];
+// GC3ボタン（排他）
+const GC3_BTNS = [
+  { key:'blue_allagan',  label:'青アラガン', img:'allagan', color:'blue'   },
+  { key:'blue_choetsu',  label:'青超越',     img:'choetsu', color:'blue'   },
+  { key:'purple_allagan',label:'紫アラガン', img:'allagan', color:'purple' },
+  { key:'purple_choetsu',label:'紫超越',     img:'choetsu', color:'purple' },
+];
+// マジックチャージボタン（排他）
+const MC_BTNS = ['両方踏む','氷踏む','雷踏む','両方踏まない'];
+
+const SECS = [
+  { id:'gc1', title:'グランドクロス１', type:'gc',  gimmicks:GC_GIMMICKS },
+  { id:'ht1', title:'ほのおつなみ１',   type:'ht',  gimmicks:HT_GIMMICKS },
+  { id:'gc2', title:'グランドクロス２', type:'gc',  gimmicks:GC_GIMMICKS },
+  { id:'ht2', title:'ほのおつなみ２',   type:'ht',  gimmicks:HT_GIMMICKS },
+  { id:'gc3', title:'グランドクロス３', type:'gc3' },
+  { id:'mc',  title:'マジックチャージ', type:'mc'  },
+];
+
+const secTruth = { gc1:true, ht1:true, gc2:true, ht2:true };
+const active = {};
+const btnMap = {};
+
+function resolveName(raw, isTrue) {
+  if (raw === '頭割り')      return isTrue ? '頭割り'              : 'ライトニング';
+  if (raw === 'ライトニング') return isTrue ? 'ライトニング'        : '頭割り';
+  if (raw === '加速度爆弾')  return isTrue ? '加速度爆弾（動かない）' : '加速度爆弾（動く）';
+  if (raw === '視線')        return isTrue ? '視線（見ない）'       : '視線（見る）';
+  if (raw === 'ほのお')      return isTrue ? 'たけのこAoE'          : 'たけのこドーナツ';
+  if (raw === 'つなみ')      return isTrue ? 'たけのこドーナツ'     : 'たけのこAoE';
+  return raw;
+}
+
+const SORT_ORDER = [
+  '頭割り','ライトニング',
+  '加速度爆弾（動く）','加速度爆弾（動かない）',
+  '視線（見る）','視線（見ない）',
+  'たけのこAoE','たけのこドーナツ'
+];
+function sortByPriority(arr) {
+  return [...arr].sort((a,b) => {
+    const ia = SORT_ORDER.indexOf(a), ib = SORT_ORDER.indexOf(b);
+    return (ia===-1?999:ia)-(ib===-1?999:ib);
+  });
+}
+
+function buildUI() {
+  const app = document.getElementById('app');
+
+  SECS.forEach(s => {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+
+    // ヘッダー
+    const header = document.createElement('div');
+    header.className = 'sec-header';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'sec-title';
+    titleEl.textContent = s.title;
+    header.appendChild(titleEl);
+
+    if (s.type === 'gc' || s.type === 'ht') {
+      const toggle = document.createElement('div');
+      toggle.className = 'truth-toggle';
+      const btnT = document.createElement('button');
+      btnT.className = 'tt-btn tt-true active';
+      btnT.textContent = '本当';
+      const div = document.createElement('div');
+      div.className = 'tt-divider-v';
+      const btnF = document.createElement('button');
+      btnF.className = 'tt-btn tt-false';
+      btnF.textContent = '嘘';
+
+      btnT.onclick = () => { setTruth(s.id, !secTruth[s.id], btnT, btnF, s); };
+      btnF.onclick = () => { setTruth(s.id, !secTruth[s.id], btnT, btnF, s); };
+
+      toggle.appendChild(btnT);
+      toggle.appendChild(div);
+      toggle.appendChild(btnF);
+      header.appendChild(toggle);
+      s._btnTrue = btnT;
+      s._btnFalse = btnF;
+    }
+
+    sec.appendChild(header);
+
+    // ボタン本体
+    if (s.type === 'gc' || s.type === 'ht') {
+      const row = document.createElement('div');
+      row.className = 'gimmick-row';
+
+      s.gimmicks.forEach(g => {
+        const item = document.createElement('div');
+        item.className = 'gimmick-item';
+
+        const icon = document.createElement('img');
+        icon.className = 'gimmick-icon';
+        icon.src = IMGS[g.img];
+        icon.alt = g.label;
+        item.appendChild(icon);
+
+        const lbl = document.createElement('div');
+        lbl.className = 'gimmick-label';
+        lbl.textContent = g.label;
+        item.appendChild(lbl);
+
+        const btns = document.createElement('div');
+        btns.className = 'gimmick-btns';
+
+        g.timings.forEach(timing => {
+          const k = `${s.id}_${g.key}_${timing}`;
+          const btn = document.createElement('button');
+          btn.className = 'vb';
+          btn.textContent = timing;
+          btn.addEventListener('click', () => {
+            const wasOn = !!active[k];
+            const isTrue = secTruth[s.id];
+            // 同じギミックの他のタイミングボタンを消灯
+            g.timings.forEach(t => {
+              const ok = `${s.id}_${g.key}_${t}`;
+              active[ok] = false;
+              if (btnMap[ok]) btnMap[ok].el.classList.remove('active-true','active-false');
+            });
+            // 押したボタンをトグル
+            if (!wasOn) {
+              active[k] = true;
+              btn.classList.add(isTrue ? 'active-true' : 'active-false');
+            }
+            updateSummary();
+          });
+          btnMap[k] = { el: btn, secId: s.id, base: g.key, timing, type: s.type };
+          btns.appendChild(btn);
+        });
+
+        item.appendChild(btns);
+        row.appendChild(item);
+      });
+      sec.appendChild(row);
+
+    } else if (s.type === 'gc3') {
+      const row = document.createElement('div');
+      row.className = 'gimmick-row';
+
+      GC3_BTNS.forEach(g => {
+        const item = document.createElement('div');
+        item.className = 'gimmick-item';
+
+        // アイコン（blue/purple と allagan/choetsu を横並びで2枚表示）
+        const iconWrap = document.createElement('div');
+        iconWrap.style.cssText = 'display:flex;gap:4px;align-items:center;';
+        const colorIcon = document.createElement('img');
+        colorIcon.className = 'gimmick-icon';
+        colorIcon.src = IMGS[g.color];
+        const typeIcon = document.createElement('img');
+        typeIcon.className = 'gimmick-icon';
+        typeIcon.src = IMGS[g.img];
+        iconWrap.appendChild(colorIcon);
+        iconWrap.appendChild(typeIcon);
+        item.appendChild(iconWrap);
+
+        const lbl = document.createElement('div');
+        lbl.className = 'gimmick-label';
+        lbl.textContent = g.label;
+        item.appendChild(lbl);
+
+        const k = `gc3_${g.key}`;
+        const btn = document.createElement('button');
+        btn.className = 'vb';
+        btn.textContent = '選択';
+        btn.addEventListener('click', () => {
+          const wasOn = !!active[k];
+          // 排他
+          GC3_BTNS.forEach(gg => {
+            const kk = `gc3_${gg.key}`;
+            active[kk] = false;
+            if (btnMap[kk]) btnMap[kk].el.classList.remove('active-true','active-false');
+          });
+          if (!wasOn) {
+            active[k] = true;
+            btn.classList.add('active-true');
+          }
+          updateSummary();
+        });
+        btnMap[k] = { el: btn, secId: 'gc3', raw: g.label, type: 'gc3' };
+
+        const btns = document.createElement('div');
+        btns.className = 'gimmick-btns';
+        btns.appendChild(btn);
+        item.appendChild(btns);
+        row.appendChild(item);
+      });
+      sec.appendChild(row);
+
+    } else if (s.type === 'mc') {
+      const row = document.createElement('div');
+      row.className = 'btn-row';
+      MC_BTNS.forEach((label, i) => {
+        const k = `mc_${i}`;
+        const btn = document.createElement('button');
+        btn.className = 'vb';
+        btn.textContent = label;
+        btn.addEventListener('click', () => {
+          const wasOn = !!active[k];
+          MC_BTNS.forEach((_, j) => {
+            active[`mc_${j}`] = false;
+            if (btnMap[`mc_${j}`]) btnMap[`mc_${j}`].el.classList.remove('active-true','active-false');
+          });
+          if (!wasOn) { active[k] = true; btn.classList.add('active-true'); }
+          updateSummary();
+        });
+        btnMap[k] = { el: btn, secId: 'mc', raw: label, type: 'mc' };
+        row.appendChild(btn);
+      });
+      sec.appendChild(row);
+    }
+
+    app.appendChild(sec);
+  });
+
+  const sumEl = document.createElement('div');
+  sumEl.className = 'summary';
+  sumEl.id = 'summary';
+  app.appendChild(sumEl);
+  updateSummary();
+}
+
+function setTruth(secId, isTrue, btnT, btnF, s) {
+  secTruth[secId] = isTrue;
+  btnT.classList.toggle('active', isTrue);
+  btnF.classList.toggle('active', !isTrue);
+  // アクティブボタンの色を更新
+  Object.entries(btnMap).forEach(([k, info]) => {
+    if (info.secId !== secId || !active[k]) return;
+    info.el.classList.remove('active-true','active-false');
+    info.el.classList.add(isTrue ? 'active-true' : 'active-false');
+  });
+  updateSummary();
+}
+
+function updateSummary() {
+  const earlySet = new Set();
+  const lateSet  = new Set();
+  const gc3List  = [];
+  const mcList   = [];
+
+  Object.entries(btnMap).forEach(([k, info]) => {
+    if (!active[k]) return;
+    const { secId, type, raw } = info;
+
+    if (type === 'gc3') {
+      const gc3Map = {
+        '青アラガン': '紫に当たる（ビームが嘘なら逆の色）',
+        '青超越':     '青に当たる（ビームが嘘なら逆の色）',
+        '紫アラガン': '青に当たる（ビームが嘘なら逆の色）',
+        '紫超越':     '紫に当たる（ビームが嘘なら逆の色）',
+      };
+      gc3List.push(gc3Map[raw] || raw);
+      return;
+    }
+    if (type === 'mc') { mcList.push(raw); return; }
+
+    // gc / ht
+    const isTrue = secTruth[secId];
+    const base = info.base;
+    const gimmickLabel = (() => {
+      if (base === 'atamawari') return '頭割り';
+      if (base === 'lightning') return 'ライトニング';
+      if (base === 'kasokudo')  return '加速度爆弾';
+      if (base === 'shisen')    return '視線';
+      if (base === 'honoo')     return 'ほのお';
+      if (base === 'tsunami')   return 'つなみ';
+      return base;
+    })();
+    const name = resolveName(gimmickLabel, isTrue);
+    if (info.timing === '早') earlySet.add(name);
+    if (info.timing === '遅') lateSet.add(name);
+  });
+
+  let html = '<div class="sum-title">集計結果</div>';
+  const hasAny = earlySet.size > 0 || lateSet.size > 0 || gc3List.length > 0 || mcList.length > 0;
+
+  if (!hasAny) {
+    html += '<div class="sum-empty">ボタンを押すと集計が表示されます</div>';
+  } else {
+    if (earlySet.size > 0)
+      html += `<div class="sum-row"><span class="lbl">早：</span>${sortByPriority([...earlySet]).join('、')}</div>`;
+    if (lateSet.size > 0)
+      html += `<div class="sum-row"><span class="lbl">遅：</span>${sortByPriority([...lateSet]).join('、')}</div>`;
+    if (gc3List.length > 0) {
+      const gc3Html = gc3List.map(item => {
+        if (item.startsWith('青')) return `<span style="color:#7EC8E3">${item}</span>`;
+        if (item.startsWith('紫')) return `<span style="color:#C9A9E8">${item}</span>`;
+        return item;
+      }).join('、');
+      html += `<div class="sum-row"><span class="lbl">GC3：</span>${gc3Html}</div>`;
+    }
+    if (mcList.length > 0)
+      html += `<div class="sum-row"><span class="lbl">マジックチャージ：</span>${mcList.join('、')}</div>`;
+  }
+
+  document.getElementById('summary').innerHTML = html;
+}
+
+function resetAll() {
+  Object.keys(active).forEach(k => {
+    active[k] = false;
+    if (btnMap[k]) btnMap[k].el.classList.remove('active-true','active-false');
+  });
+  SECS.forEach(s => {
+    if (s._btnTrue)  { s._btnTrue.classList.add('active'); secTruth[s.id] = true; }
+    if (s._btnFalse) s._btnFalse.classList.remove('active');
+  });
+  updateSummary();
+}
+
+buildUI();
+</script>
+</body>
+</html>
